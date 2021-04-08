@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(ros_mscl)
 
+set(CMAKE_CXX_FLAGS "-latomic -lpthread ${CMAKE_CXX_FLAGS}")
+
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages

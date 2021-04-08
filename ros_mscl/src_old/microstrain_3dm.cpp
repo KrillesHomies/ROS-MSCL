@@ -38,7 +38,6 @@ namespace Microstrain
 
 Microstrain::Microstrain()
 {
-  m_use_device_timestamp = false;
   m_com_mode = 0;
   m_filter_valid_packet_count = 0;
   m_imu_valid_packet_count= 0;
@@ -62,8 +61,7 @@ Microstrain::Microstrain()
   m_gps_leap_seconds = 18.0;
   m_publish_gnss[GNSS1_ID]= true;
   m_publish_gnss[GNSS2_ID]= true;
-  m_publish_filter = true;
-  m_publish_rtk = false;
+  m_publish_filter= true;
   m_imu_linear_cov = std::vector<double>(9, 0.0);
   m_imu_angular_cov = std::vector<double>(9, 0.0);
   m_imu_orientation_cov = std::vector<double>(9, 0.0); 
@@ -177,14 +175,12 @@ void Microstrain::run()
   //Device
   private_nh.param("port",                  port, std::string("/dev/ttyACM0"));
   private_nh.param("baudrate",              baudrate, 115200);
-  private_nh.param("device_setup",          device_setup, false);
-  private_nh.param("save_settings",         save_settings, true);
-  private_nh.param("use_device_timestamp",  m_use_device_timestamp, true);
- 
+  private_nh.param("device_setup",          device_setup, true);
+  private_nh.param("save_settings",         save_settings, false);
 
   //IMU
   private_nh.param("publish_imu",           m_publish_imu, true);
-  private_nh.param("publish_gps_corr",      m_publish_gps_corr, false);
+  private_nh.param("publish_gps_corr",      m_publish_gps_corr, true);
   private_nh.param("imu_data_rate",         m_imu_data_rate, 100);
   private_nh.param("imu_frame_id",          m_imu_frame_id, std::string("sensor_ned"));
   private_nh.param("imu_orientation_cov",   m_imu_orientation_cov, default_matrix);
@@ -194,7 +190,7 @@ void Microstrain::run()
   //GNSS 1/2
   private_nh.param("publish_gnss1",         m_publish_gnss[GNSS1_ID], true);
   private_nh.param("publish_gnss2",         m_publish_gnss[GNSS2_ID], false);
-  private_nh.param("gnss1_data_rate",       m_gnss_data_rate[GNSS1_ID], 1);
+  private_nh.param("gnss1_data_rate",       m_gnss_data_rate[GNSS1_ID], 2);
   private_nh.param("gnss2_data_rate",       m_gnss_data_rate[GNSS2_ID], 1);
   private_nh.param("gnss1_frame_id",        m_gnss_frame_id[GNSS1_ID], std::string("gnss1_antenna_wgs84"));
   private_nh.param("gnss2_frame_id",        m_gnss_frame_id[GNSS2_ID], std::string("gnss2_antenna_wgs84"));
@@ -235,7 +231,7 @@ void Microstrain::run()
   private_nh.param("filter_adaptive_time_limit_ms" ,           filter_adaptive_time_limit_ms, 15000);
   private_nh.param("filter_enable_gnss_pos_vel_aiding",        filter_enable_gnss_pos_vel_aiding, true);
   private_nh.param("filter_enable_gnss_heading_aiding",        filter_enable_gnss_heading_aiding, true);
-  private_nh.param("filter_enable_altimeter_aiding",           filter_enable_altimeter_aiding, false);
+  private_nh.param("filter_enable_altimeter_aiding",           filter_enable_altimeter_aiding, true);
   private_nh.param("filter_enable_odometer_aiding",            filter_enable_odometer_aiding, false);
   private_nh.param("filter_enable_magnetometer_aiding",        filter_enable_magnetometer_aiding, false);
   private_nh.param("filter_enable_external_heading_aiding",    filter_enable_external_heading_aiding, false);
@@ -277,10 +273,9 @@ void Microstrain::run()
   private_nh.param("gpio_config",     gpio_config, false);
   
   //Raw data file save
-  private_nh.param("raw_file_enable",               m_raw_file_enable, true);
+  private_nh.param("raw_file_enable",               m_raw_file_enable, false);
   private_nh.param("raw_file_include_support_data", m_raw_file_include_support_data, false);
   private_nh.param("raw_file_directory",            raw_file_directory, std::string("/home/pi/Data"));
-
    
   
   ///////////////////////////////////////////////////////////////////////////
@@ -381,7 +376,6 @@ void Microstrain::run()
         ROS_INFO("Setting IMU data to stream at %d hz", m_imu_data_rate);
 
         mscl::MipTypes::MipChannelFields ahrsChannels{
-			//mscl::MipTypes::ChannelField::CH_FIELD_SENSOR_SHARED_GPS_TIMESTAMP,
             mscl::MipTypes::ChannelField::CH_FIELD_SENSOR_SCALED_ACCEL_VEC,
             mscl::MipTypes::ChannelField::CH_FIELD_SENSOR_SCALED_GYRO_VEC,
             mscl::MipTypes::ChannelField::CH_FIELD_SENSOR_ORIENTATION_QUATERNION,
@@ -421,7 +415,6 @@ void Microstrain::run()
         ROS_INFO("Setting GNSS1 data to stream at %d hz", m_gnss_data_rate[GNSS1_ID]);
 
         mscl::MipTypes::MipChannelFields gnssChannels{
-			//mscl::MipTypes::ChannelField::CH_FIELD_GNSS_SHARED_GPS_TIMESTAMP,
             mscl::MipTypes::ChannelField::CH_FIELD_GNSS_LLH_POSITION,
             mscl::MipTypes::ChannelField::CH_FIELD_GNSS_NED_VELOCITY,
             mscl::MipTypes::ChannelField::CH_FIELD_GNSS_GPS_TIME};
@@ -542,8 +535,6 @@ void Microstrain::run()
       {
         ROS_INFO("Setting RTK dongle enable to %d", rtk_dongle_enable);
         m_inertial_device->enableRtk(rtk_dongle_enable);
-
-        m_publish_rtk = rtk_dongle_enable;
       }
 
       //
@@ -557,7 +548,6 @@ void Microstrain::run()
         ROS_INFO("Setting Filter data to stream at %d hz", m_filter_data_rate);
 
         mscl::MipTypes::MipChannelFields navChannels{
-            mscl::MipTypes::ChannelField::CH_FIELD_ESTFILTER_GPS_TIMESTAMP,
             mscl::MipTypes::ChannelField::CH_FIELD_ESTFILTER_FILTER_STATUS,
             mscl::MipTypes::ChannelField::CH_FIELD_ESTFILTER_ESTIMATED_LLH_POS,
             mscl::MipTypes::ChannelField::CH_FIELD_ESTFILTER_ESTIMATED_NED_VELOCITY,
@@ -937,7 +927,6 @@ void Microstrain::run()
     //If the device has RTK, publish relevant topics
     if(m_publish_rtk && supports_rtk)
     {
-      ROS_INFO("Publishing RTK data.");
       m_rtk_pub =  node.advertise<mscl_msgs::RTKStatus>("rtk/status", 100);
     }
 
@@ -1408,8 +1397,8 @@ void Microstrain::parse_imu_packet(const mscl::MipDataPacket &packet)
   //Handle time
   uint64_t time = packet.collectedTimestamp().nanoseconds();
   
-  //Check if the user wants to use the device timestamp instead of PC collected time
-  if(packet.hasDeviceTime() && m_use_device_timestamp) 
+  // Note: validity check removed so time is assigned even if GPS time has not been captured
+  if(packet.hasDeviceTime()) // && packet.deviceTimeValid()) 
   {
      time = packet.deviceTimestamp().nanoseconds();
   }
@@ -1577,8 +1566,8 @@ void Microstrain::parse_filter_packet(const mscl::MipDataPacket &packet)
   //Handle time
   uint64_t time = packet.collectedTimestamp().nanoseconds();
   
-  //Check if the user wants to use the device timestamp instead of PC collected time
-  if(packet.hasDeviceTime() && m_use_device_timestamp) 
+  // Note: validity check removed so time is assigned even if GPS time has not been captured
+  if(packet.hasDeviceTime())// && packet.deviceTimeValid()) 
   {
      time = packet.deviceTimestamp().nanoseconds();
   }
@@ -1895,8 +1884,8 @@ void Microstrain::parse_gnss_packet(const mscl::MipDataPacket &packet, int gnss_
   uint64_t time       = packet.collectedTimestamp().nanoseconds();
   bool     time_valid = false;
 
-  //Check if the user wants to use the device timestamp instead of PC collected time
-  if(packet.hasDeviceTime() && m_use_device_timestamp) 
+  // Note: validity check removed so time is assigned even if GPS time has not been captured
+  if(packet.hasDeviceTime()) // && (packet.deviceTimeFlags() >= 3)) 
   {
      time       = packet.deviceTimestamp().nanoseconds();
      time_valid = true;
@@ -2006,8 +1995,8 @@ void Microstrain::parse_rtk_packet(const mscl::MipDataPacket& packet)
   //Handle time
   uint64_t time = packet.collectedTimestamp().nanoseconds();
 
-  //Check if the user wants to use the device timestamp instead of PC collected time
-  if(packet.hasDeviceTime() && m_use_device_timestamp) 
+  // Note: validity check removed so time is assigned even if GPS time has not been captured
+  if(packet.hasDeviceTime()) // && (packet.deviceTimeFlags() >= 3)) 
     time = packet.deviceTimestamp().nanoseconds();
 
   //Get the list of data elements
@@ -2038,12 +2027,17 @@ void Microstrain::parse_rtk_packet(const mscl::MipDataPacket& packet)
           //Decode dongle status
           mscl::RTKDeviceStatusFlags dongle_status(point.as_uint32());
 
-          //m_rtk_msg.dongle_controller_state  = dongle_status.controllerState(); 
-          //m_rtk_msg.dongle_platform_state 	 = dongle_status.platformState(); 
-          //m_rtk_msg.dongle_controller_status = dongle_status.controllerStatusCode(); 
-          //m_rtk_msg.dongle_platform_status 	 = dongle_status.platformStatusCode(); 
-          //m_rtk_msg.dongle_reset_reason 	   = dongle_status.resetReason(); 
-          //m_rtk_msg.dongle_signal_quality		 = dongle_status.signalQuality(); 
+          m_rtk_msg.dongle_state 						   = dongle_status.state(); 
+          m_rtk_msg.dongle_status 				     = dongle_status.statusCode(); 
+          m_rtk_msg.dongle_corrections_timeout = dongle_status.correctionsTimedOut();
+          m_rtk_msg.dongle_service_unavailable = dongle_status.serviceUnavailable();
+          m_rtk_msg.dongle_reset_reason 		   = static_cast<uint8_t>(dongle_status.resetReason());
+          m_rtk_msg.dongle_modem_powered 			 = dongle_status.modemPowered(); 
+          m_rtk_msg.dongle_cell_connected 		 = dongle_status.cellConnected();
+          m_rtk_msg.dongle_server_connected 	 = dongle_status.serverConnected();
+          m_rtk_msg.dongle_data_enabled 			 = dongle_status.dataEnabled(); 
+          m_rtk_msg.dongle_rssi 					     = dongle_status.rssi(); 
+          m_rtk_msg.dongle_signal_quality			 = dongle_status.signalQuality(); 
         }
         else if(point.qualifier() == mscl::MipTypes::CH_GPS_CORRECTION_LATENCY)
         {

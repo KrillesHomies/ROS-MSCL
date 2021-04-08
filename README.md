@@ -1,3 +1,14 @@
+
+## !!!Fork Notes!!!
+
+This version of the driver has been changed in order for it to work on a raspberry pi Zero System running ROS Melodic (see http://wiki.ros.org/ROSberryPi/Installing%20ROS%20Melodic%20on%20the%20Raspberry%20Pi)
+
+Currently chaning options in the launch file doesn't seem to work. This seems to be an issue with Melodic.
+
+
+MSCL drivers will need to be compiled from source for this to work on a Raspberry pi Zero system.
+
+
 ## Description
 
 Interface (driver) software, including ROS node, for inertial sensors compatible with the [Microstrain Communication Library (MSCL)](https://github.com/LORD-MicroStrain/MSCL).
@@ -8,9 +19,7 @@ MSCL is developed by [LORD Sensing - Microstrain](http://microstrain.com) in Wil
 ## Build Instructions
 
 #### MSCL
-MSCL pre-built packages can be found here: [MSCL Packages](https://github.com/LORD-MicroStrain/MSCL/releases/tag/v61.1.6)
-
-We do our best to keep ROS-MSCL up-to-date with the latest MSCL changes, but sometimes there is a delay. The currently supported version of MSCL is [v61.1.6](https://github.com/LORD-MicroStrain/MSCL/releases/tag/v61.1.6)
+MSCL pre-built packages can be found here: [MSCL Packages](https://github.com/LORD-MicroStrain/MSCL#downloads)
 
 Install instructions can be found here: [How to Use MSCL](https://github.com/LORD-MicroStrain/MSCL/blob/master/HowToUseMSCL.md#linux)
 
